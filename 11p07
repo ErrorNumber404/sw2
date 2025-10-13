@@ -1,0 +1,68 @@
+#include <Servo.h>
+
+#define PIN_LED    9
+#define PIN_TRIG   12
+#define PIN_ECHO   13
+#define PIN_SERVO  10
+
+const float alpha = 0.6;
+const int DIST_MIN = 18;
+const int DIST_MAX = 36;
+float emaDistance = 0;
+
+Servo myservo;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(PIN_TRIG, OUTPUT);
+  pinMode(PIN_ECHO, INPUT);
+  pinMode(PIN_LED, OUTPUT);
+  myservo.attach(PIN_SERVO);
+}
+
+float getDistance() {
+  digitalWrite(PIN_TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(PIN_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(PIN_TRIG, LOW);
+
+  long duration = pulseIn(PIN_ECHO, HIGH);
+  float distance = duration * 0.034 / 2;
+  return distance;
+}
+
+void loop() {
+  float rawDistance = getDistance();
+
+  emaDistance = alpha * rawDistance + (1 - alpha) * emaDistance;
+
+  int angle;
+  if (emaDistance <= DIST_MIN) {
+    angle = 0;
+  } else if (emaDistance >= DIST_MAX) {
+    angle = 180;
+  } else {
+    angle = map(emaDistance, DIST_MIN, DIST_MAX, 0, 180);
+  }
+
+  myservo.write(angle);
+
+  if (emaDistance >= DIST_MIN && emaDistance <= DIST_MAX) {
+    digitalWrite(PIN_LED, HIGH);
+  } else {
+    digitalWrite(PIN_LED, LOW);
+  }
+
+  Serial.print("DIST_MIN:");
+  Serial.print(DIST_MIN);
+  Serial.print(", ");
+  Serial.print("DIST_MAX:");
+  Serial.print(DIST_MAX);
+  Serial.print(", ");
+  Serial.print("servo:");
+  Serial.print(myservo.read());
+  Serial.println("");
+
+  delay(100);
+}
